@@ -178,6 +178,8 @@ app.registerExtension({
       const node = this;
       const selectedWidget = node.widgets.find((w) => w.name === "selected_pin");
       if (selectedWidget) {
+        // Keep the value serialized with the prompt without letting LiteGraph
+        // draw or size the hidden transport widget.
         selectedWidget.computeSize = () => [0, -4];
         selectedWidget.draw = () => {};
       }
@@ -413,12 +415,19 @@ app.registerExtension({
       input.addEventListener("input", () => {
         clearTimeout(debounceTimer);
         const query = input.value.trim();
-        debounceTimer = setTimeout(() => {
-          if (!query || query === currentQuery || mode !== "search") return;
+        if (query !== currentQuery) {
           cancelActiveRequest();
           requestGeneration += 1;
-          currentQuery = query;
+          currentQuery = "";
           clearResults();
+        }
+        if (!query) {
+          setStatus("Type a keyword to search Pinterest.");
+          return;
+        }
+        debounceTimer = setTimeout(() => {
+          if (!query || query === currentQuery || mode !== "search") return;
+          currentQuery = query;
           runSearch(query, null, requestGeneration);
         }, 500);
       });
@@ -432,7 +441,10 @@ app.registerExtension({
 
       boardSelect.style.display = "none";
       setStatus("Type a keyword to search Pinterest.");
+      // The grid flex-fills the DOM widget and scrolls internally. Computing
+      // node size from content height creates an unbounded resize feedback loop.
       node.addDOMWidget("pinterest_gallery_ui", "div", wrap, { serialize: false });
+      // Give new nodes a tidy frame and repair oversized frames saved by older builds.
       requestAnimationFrame(() => {
         let [w, h] = node.size;
         w = Math.max(w, 320);
