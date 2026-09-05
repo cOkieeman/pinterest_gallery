@@ -89,8 +89,9 @@ def parse_board_pins_response(response_json):
         entries.sort(key=lambda entry: entry[2])
         image_url = entries[-1][1]
         preferred_thumbs = ("400x300", "236x", "150x150", "236x236")
+        urls_by_size = {key: url for key, url, _ in entries}
         thumbnail_url = next(
-            (url for key, url, _ in entries if key in preferred_thumbs),
+            (urls_by_size[key] for key in preferred_thumbs if key in urls_by_size),
             entries[0][1],
         )
         items.append(
@@ -184,7 +185,7 @@ class PinterestOfficialClient:
         self.token = (token if token is not None else os.getenv("PINTEREST_ACCESS_TOKEN", "")).strip()
         self.session = session or requests.Session()
         self.timeout = timeout
-        self.environment = (environment or os.getenv("PINTEREST_API_ENV", "sandbox")).strip().lower()
+        self.environment = (environment or os.getenv("PINTEREST_API_ENV", "production")).strip().lower()
         if self.environment not in OFFICIAL_API_URLS:
             raise ValueError("PINTEREST_API_ENV must be sandbox or production")
         self.session.headers.update(
